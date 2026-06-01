@@ -4,17 +4,18 @@ const GITHUB_REPO = "drone_club";
 // 页面加载时加载所有Q&A
 async function loadQA() {
   const list = document.getElementById("qaList");
-  if (!list) return; // 避免DOM不存在报错
+  if (!list) return;
   list.innerHTML = `<div class="materials-empty">加载中...</div>`;
 
   try {
-    // 修复1：标签参数编码（q&a标签需把&转成%26，若为两个标签则用labels=q,a）
-    const labels = encodeURIComponent("q&a"); // 关键：编码特殊字符
+    // 修复：使用合法标签名qa，添加时间戳防止缓存
     const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/issues?labels=${labels}&state=all`
+      `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/issues?labels=qa&state=all&t=${Date.now()}`
     );
 
-    // 兼容GitHub API返回的错误（比如404/403）
+    if (response.status === 403) {
+      throw new Error("GitHub访问过于频繁，请1小时后再试");
+    }
     if (!response.ok) throw new Error(`API错误：${response.status}`);
     
     const issues = await response.json();
@@ -68,7 +69,7 @@ async function loadReplies(issueNumber) {
   
   try {
     const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/issues/${issueNumber}/comments`
+      `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/issues/${issueNumber}/comments?t=${Date.now()}`
     );
     if (!response.ok) throw new Error(`回答加载失败：${response.status}`);
     
@@ -95,13 +96,18 @@ async function loadReplies(issueNumber) {
   }
 }
 
-// 提交问题逻辑（修复弹窗拦截+参数编码）
+// 提交问题逻辑
 function bindSubmitEvent() {
-  const submitBtn = document.getElementById("submitQuestion");
+  let submitBtn = document.getElementById("submitQuestion");
   if (!submitBtn) {
     console.error("未找到submitQuestion按钮");
     return;
   }
+
+  // 修复：彻底清除所有旧事件
+  const newBtn = submitBtn.cloneNode(true);
+  submitBtn.parentNode.replaceChild(newBtn, submitBtn);
+  submitBtn = newBtn;
 
   submitBtn.addEventListener("click", () => {
     const questionInput = document.getElementById("qaQuestion");
@@ -119,23 +125,20 @@ function bindSubmitEvent() {
       return;
     }
 
-    // 修复2：正确编码标签和内容（避免特殊字符导致URL失效）
-    const labels = encodeURIComponent("q&a");
+    // 修复：使用合法标签名qa
     const title = encodeURIComponent(question);
     const body = encodeURIComponent(content || "");
+    const issueUrl = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/issues/new?labels=qa&title=${title}&body=${body}`;
     
-    const issueUrl = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/issues/new?labels=${labels}&title=${title}&body=${body}`;
-    
-    // 修复3：避免弹窗拦截（先提示，再打开）
-    alert("即将跳转到GitHub提交问题，请允许弹窗！");
+    // 修复：先打开窗口，再提示，避免被拦截
     const newWindow = window.open(issueUrl, "_blank");
     if (!newWindow) {
-      // 弹窗被拦截时，给出备用链接
       alert("弹窗被浏览器拦截！请手动打开：\n" + issueUrl);
-      // 复制链接到剪贴板（可选）
       navigator.clipboard.writeText(issueUrl).then(() => {
         alert("链接已复制到剪贴板！");
       });
+    } else {
+      alert("已跳转到GitHub提交问题，提交后刷新本页面即可看到");
     }
 
     // 清空表单
@@ -144,12 +147,8 @@ function bindSubmitEvent() {
   });
 }
 
-// 页面加载初始化（确保DOM完全加载）
+// 页面加载初始化
 document.addEventListener("DOMContentLoaded", () => {
-  // 先解绑旧事件（避免和旧qa.js冲突）
-  const submitBtn = document.getElementById("submitQuestion");
-  if (submitBtn) submitBtn.onclick = null;
-  
-  bindSubmitEvent(); // 绑定新的提交事件
-  loadQA(); // 加载问答列表
+  bindSubmitEvent();
+  loadQA();
 });
