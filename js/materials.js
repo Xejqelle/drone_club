@@ -83,3 +83,7 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
 
 // 页面加载时初始化
 document.addEventListener("DOMContentLoaded", () => loadMaterials());
+// 兼容app.js的调用
+function initMaterials() {
+  loadMaterials();
+}
