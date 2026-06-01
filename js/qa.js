@@ -1,5 +1,5 @@
-const GITHUB_USER = "Xejqelle";
-const GITHUB_REPO = "drone_club";
+// 直接使用materials.js中已经声明的全局变量
+const GITHUB_BRANCH = "main";
 
 // 页面加载时加载所有Q&A
 async function loadQA() {
@@ -8,7 +8,7 @@ async function loadQA() {
   list.innerHTML = `<div class="materials-empty">加载中...</div>`;
 
   try {
-    // 修复：使用合法标签名qa，添加时间戳防止缓存
+    // 使用合法标签名qa，添加时间戳防止缓存
     const response = await fetch(
       `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/issues?labels=qa&state=all&t=${Date.now()}`
     );
@@ -104,7 +104,7 @@ function bindSubmitEvent() {
     return;
   }
 
-  // 修复：彻底清除所有旧事件
+  // 彻底清除所有旧事件
   const newBtn = submitBtn.cloneNode(true);
   submitBtn.parentNode.replaceChild(newBtn, submitBtn);
   submitBtn = newBtn;
@@ -125,12 +125,12 @@ function bindSubmitEvent() {
       return;
     }
 
-    // 修复：使用合法标签名qa
+    // 使用合法标签名qa
     const title = encodeURIComponent(question);
     const body = encodeURIComponent(content || "");
     const issueUrl = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/issues/new?labels=qa&title=${title}&body=${body}`;
     
-    // 修复：先打开窗口，再提示，避免被拦截
+    // 先打开窗口，再提示，避免被拦截
     const newWindow = window.open(issueUrl, "_blank");
     if (!newWindow) {
       alert("弹窗被浏览器拦截！请手动打开：\n" + issueUrl);
