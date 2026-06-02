@@ -2,13 +2,27 @@ const GITHUB_USER = "Xejqelle";
 const GITHUB_REPO = "drone_club";
 const GITHUB_BRANCH = "main";
 
+// 按文件名自动分类
+function getFileCategory(filename) {
+  if (filename.includes("培训课件") || filename.includes("课件")) return "training";
+  if (filename.includes("操作教程") || filename.includes("教程")) return "tutorial";
+  if (filename.includes("参考资料") || filename.includes("规则") || filename.includes("文档")) return "reference";
+  return "other";
+}
+
+// 格式化文件大小
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 // 页面加载时加载所有培训资料
 async function loadMaterials(filter = "all") {
   const container = document.getElementById("materials-content");
   container.innerHTML = `<div class="materials-empty">加载中...</div>`;
 
   try {
-    // 调用GitHub API获取uploads文件夹下的所有文件
     const response = await fetch(
       `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/uploads?ref=${GITHUB_BRANCH}`
     );
@@ -24,14 +38,27 @@ async function loadMaterials(filter = "all") {
       return;
     }
 
-    // 过滤并渲染文件列表
-    const filteredFiles = filter === "all" 
-      ? files.filter(file => file.name !== ".gitkeep")
-      : files.filter(file => file.name.includes(filter));
+    // 基础过滤
+    let validFiles = files.filter(file => file.name !== ".gitkeep");
 
+    // 分类筛选（核心！恢复4个分类功能）
+    if (filter !== "all") {
+      validFiles = validFiles.filter(file => getFileCategory(file.name) === filter);
+    }
+
+    if (validFiles.length === 0) {
+      container.innerHTML = `
+        <div class="materials-empty">
+          <div class="empty-icon">📂</div>
+          <p>该分类下暂无资料</p>
+        </div>
+      `;
+      return;
+    }
+
+    // 渲染文件
     container.innerHTML = "";
-    filteredFiles.forEach(file => {
-      // 生成永久下载链接
+    validFiles.forEach(file => {
       const downloadUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/uploads/${file.name}`;
       
       const card = document.createElement("div");
@@ -41,7 +68,7 @@ async function loadMaterials(filter = "all") {
         <div class="material-info">
           <h4>${file.name}</h4>
           <div class="material-meta">
-            <span>大小：${(file.size / 1024).toFixed(1)} KB</span>
+            <span>大小：${formatFileSize(file.size)}</span>
           </div>
         </div>
         <div class="material-actions">
@@ -61,29 +88,32 @@ async function loadMaterials(filter = "all") {
   }
 }
 
-// 点击上传按钮跳转到GitHub上传页面
+// 上传按钮
 document.getElementById("uploadArea").addEventListener("click", () => {
-  // 直接跳转到你仓库的uploads文件夹上传页面
+  alert("将跳转到GitHub上传文件，直接上传到 uploads 文件夹即可，自动分类！");
   window.open(`https://github.com/${GITHUB_USER}/${GITHUB_REPO}/upload/main/uploads`, "_blank");
-  alert("将跳转到GitHub上传文件，上传后提交Pull Request，审核通过后即可显示");
 });
 
-// 隐藏原来的上传确认面板（我们用GitHub原生上传）
-document.getElementById("confirmUpload").style.display = "none";
-document.getElementById("cancelUpload").style.display = "none";
+// 隐藏无用按钮
+document.addEventListener("DOMContentLoaded", () => {
+  const confirmBtn = document.getElementById("confirmUpload");
+  const cancelBtn = document.getElementById("cancelUpload");
+  if (confirmBtn) confirmBtn.style.display = "none";
+  if (cancelBtn) cancelBtn.style.display = "none";
 
-// 筛选按钮点击事件
-document.querySelectorAll(".filter-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    loadMaterials(btn.dataset.filter);
+  // 筛选按钮绑定
+  document.querySelectorAll(".filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      loadMaterials(btn.dataset.filter);
+    });
   });
+
+  loadMaterials();
 });
 
-// 页面加载时初始化
-document.addEventListener("DOMContentLoaded", () => loadMaterials());
-// 兼容app.js的调用
+// 兼容调用
 function initMaterials() {
   loadMaterials();
 }
