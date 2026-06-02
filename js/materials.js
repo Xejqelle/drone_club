@@ -43,14 +43,11 @@ async function loadMaterials(filter = "all") {
 
     container.innerHTML = "";
     valid.forEach(file => {
-      // 预览链接（直接打开）
-      const viewUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/uploads/${file.name}`;
-      // 下载链接（保存本地）
+      // 👇 这是 GitHub 官方正规下载链接（最稳）
       const downUrl = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/raw/${GITHUB_BRANCH}/uploads/${file.name}?raw=true`;
 
       const card = document.createElement("div");
       card.className = "material-card";
-      // 👇 这里变成两个按钮：预览 + 下载
       card.innerHTML = `
         <div class="material-icon">📄</div>
         <div class="material-info">
@@ -58,7 +55,6 @@ async function loadMaterials(filter = "all") {
           <div class="material-meta"><span>大小：${formatFileSize(file.size)}</span></div>
         </div>
         <div class="material-actions">
-          <a href="${viewUrl}" target="_blank" class="btn btn-secondary">预览</a>
           <a href="${downUrl}" download="${file.name}" class="btn btn-primary">下载</a>
         </div>
       `;
