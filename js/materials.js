@@ -14,7 +14,7 @@ function getFileCategory(filename) {
 function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 }
 
 async function loadMaterials(filter = "all") {
@@ -32,22 +32,22 @@ async function loadMaterials(filter = "all") {
 
     let valid = files.filter(f => f.name !== ".gitkeep");
 
-    // 关键：filter现在是【培训课件/操作教程/参考资料/其他】中文
-    if(filter !== "all"){
-      valid = valid.filter(item => getFileCategory(item.name) === filter)
+    if (filter !== "all") {
+      valid = valid.filter(item => getFileCategory(item.name) === filter);
     }
 
-    if(valid.length === 0){
+    if (valid.length === 0) {
       container.innerHTML = `<div class="materials-empty"><p>该分类暂无文件</p></div>`;
       return;
     }
 
     container.innerHTML = "";
-    valid.forEach(file=>{
-      const downUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/uploads/${file.name}`;
+    valid.forEach(file => {
+      // 👇 这是 GitHub 官方正规下载链接（最稳）
+      const downUrl = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/raw/${GITHUB_BRANCH}/uploads/${file.name}?raw=true`;
+
       const card = document.createElement("div");
       card.className = "material-card";
-      // 👇 这里改成按钮，不再用 a 标签，解决下载问题
       card.innerHTML = `
         <div class="material-icon">📄</div>
         <div class="material-info">
@@ -55,29 +55,10 @@ async function loadMaterials(filter = "all") {
           <div class="material-meta"><span>大小：${formatFileSize(file.size)}</span></div>
         </div>
         <div class="material-actions">
-          <button class="btn btn-primary download-btn" data-url="${downUrl}" data-name="${file.name}">下载</button>
+          <a href="${downUrl}" download="${file.name}" class="btn btn-primary">下载</a>
         </div>
       `;
       container.appendChild(card);
-    });
-
-    // 👇 新增：强制下载所有文件（txt/pdf/图片都能直接下载，不会打开）
-    document.querySelectorAll(".download-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const url = btn.dataset.url;
-        const name = btn.dataset.name;
-        try {
-          const response = await fetch(url);
-          const blob = await response.blob();
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = name;
-          link.click();
-          URL.revokeObjectURL(link.href);
-        } catch (e) {
-          window.open(url, "_blank");
-        }
-      });
     });
 
   } catch (err) {
@@ -87,30 +68,29 @@ async function loadMaterials(filter = "all") {
 }
 
 // 上传跳转
-document.getElementById("uploadArea").addEventListener("click",()=>{
+document.getElementById("uploadArea").addEventListener("click", () => {
   alert(`命名规则：
 带【课件】→自动分到：培训课件
 带【教程】→自动分到：操作教程
 带【规则/参考】→自动分到：参考资料
 其余 → 其他`);
-  window.open(`https://github.com/${GITHUB_USER}/${GITHUB_REPO}/upload/main/uploads`,"_blank")
-})
+  window.open(`https://github.com/${GITHUB_USER}/${GITHUB_REPO}/upload/main/uploads`, "_blank");
+});
 
-document.addEventListener("DOMContentLoaded",()=>{
+document.addEventListener("DOMContentLoaded", () => {
   const confirm = document.getElementById("confirmUpload");
   const cancel = document.getElementById("cancelUpload");
-  if(confirm) confirm.style.display="none";
-  if(cancel) cancel.style.display="none";
+  if (confirm) confirm.style.display = "none";
+  if (cancel) cancel.style.display = "none";
 
-  // 按钮点击：data-filter就是按钮文字（中文）
-  document.querySelectorAll(".filter-btn").forEach(btn=>{
-    btn.onclick = ()=>{
-      document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".filter-btn").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      loadMaterials(btn.innerText.trim()) // 直接拿按钮文字当筛选值！
-    }
-  })
+      loadMaterials(btn.innerText.trim());
+    };
+  });
   loadMaterials("all");
-})
+});
 
-function initMaterials(){loadMaterials()}
+function initMaterials() { loadMaterials() }
