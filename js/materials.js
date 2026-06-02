@@ -47,16 +47,38 @@ async function loadMaterials(filter = "all") {
       const downUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/uploads/${file.name}`;
       const card = document.createElement("div");
       card.className = "material-card";
+      // 👇 这里改成按钮，不再用 a 标签，解决下载问题
       card.innerHTML = `
         <div class="material-icon">📄</div>
         <div class="material-info">
           <h4>${file.name}</h4>
           <div class="material-meta"><span>大小：${formatFileSize(file.size)}</span></div>
         </div>
-        <div class="material-actions"><a href="${downUrl}" download="${file.name}" class="btn btn-primary">下载</a></div>
+        <div class="material-actions">
+          <button class="btn btn-primary download-btn" data-url="${downUrl}" data-name="${file.name}">下载</button>
+        </div>
       `;
       container.appendChild(card);
-    })
+    });
+
+    // 👇 新增：强制下载所有文件（txt/pdf/图片都能直接下载，不会打开）
+    document.querySelectorAll(".download-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const url = btn.dataset.url;
+        const name = btn.dataset.name;
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = name;
+          link.click();
+          URL.revokeObjectURL(link.href);
+        } catch (e) {
+          window.open(url, "_blank");
+        }
+      });
+    });
 
   } catch (err) {
     container.innerHTML = `<div class="materials-empty"><p>加载异常</p></div>`;
